@@ -1,0 +1,1727 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPI · Preços &amp; Vendas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --ink:#171A21;
+  --ink-soft:#3D414C;
+  --paper:#F3F1EA;
+  --paper-raised:#FFFFFF;
+  --line:#DEDACC;
+  --line-strong:#C9C4B0;
+  --blueprint:#2C4A6E;
+  --blueprint-soft:#E7EDF3;
+  --gold:#B8863B;
+  --gold-soft:#F4E9D6;
+  --crit:#B23A2E;
+  --crit-soft:#F7E3DF;
+  --preco:#C77B23;
+  --preco-soft:#FAEBD8;
+  --volume:#3A6EA5;
+  --volume-soft:#E3ECF5;
+  --ok:#2F7A52;
+  --ok-soft:#E1EFE6;
+  --neutral:#8A8574;
+  --neutral-soft:#EDEAE0;
+  --radius:10px;
+  --shadow: 0 1px 2px rgba(23,26,33,.06), 0 8px 24px -12px rgba(23,26,33,.18);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'Inter',system-ui,-apple-system,sans-serif;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--gold-soft);}
+h1,h2,h3,.display{font-family:'Fraunces',Georgia,serif;}
+.mono{font-family:'IBM Plex Mono',monospace;}
+a{color:inherit;}
+button{font-family:inherit;}
+
+/* ---------- Blueprint texture header ---------- */
+.blueprint-bg{
+  position:sticky;
+  top:0;
+  z-index:45;
+  background:
+    linear-gradient(180deg, rgba(23,26,33,0) 60%, var(--paper) 100%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.045) 0 1px, transparent 1px 28px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.045) 0 1px, transparent 1px 28px),
+    linear-gradient(120deg,#171A21,#1F2530 55%,#1B2836);
+  color:#F3F1EA;
+  box-shadow:0 8px 22px -10px rgba(10,12,16,.45);
+}
+
+/* ---------- Layout shell ---------- */
+.shell{max-width:1440px;margin:0 auto;padding:0 28px;}
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 0 22px;gap:20px;flex-wrap:wrap;
+}
+.brand{display:flex;align-items:center;gap:14px;}
+.brand-mark{
+  width:40px;height:40px;border-radius:9px;
+  background:linear-gradient(135deg,var(--gold),#8f6425);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Fraunces',serif;font-weight:700;font-size:18px;color:#1c1206;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.25);
+  flex:none;
+}
+.brand-text h1{margin:0;font-size:21px;font-weight:600;letter-spacing:.2px;color:#fff;}
+.brand-text p{margin:2px 0 0;font-size:12.5px;color:#B9C2CE;letter-spacing:.3px;}
+
+.topbar-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.pill{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:500;
+  border:1px solid rgba(255,255,255,.18);color:#E8E3D6;background:rgba(255,255,255,.05);
+  white-space:nowrap;
+}
+.pill .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none;}
+.pill.warn .dot{background:#D9A02B;}
+
+.btn{
+  appearance:none;border:none;cursor:pointer;
+  display:inline-flex;align-items:center;gap:8px;
+  padding:9px 16px;border-radius:8px;font-size:13.5px;font-weight:600;
+  transition:.15s ease;letter-spacing:.1px;
+}
+.btn-primary{background:var(--gold);color:#20140A;}
+.btn-primary:hover{background:#c8934a;}
+.btn-ghost{background:rgba(255,255,255,.08);color:#F3F1EA;border:1px solid rgba(255,255,255,.2);}
+.btn-ghost:hover{background:rgba(255,255,255,.16);}
+.btn-outline{background:transparent;color:var(--ink);border:1px solid var(--line-strong);}
+.btn-outline:hover{background:#fff;border-color:var(--ink-soft);}
+.btn-sm{padding:6px 11px;font-size:12px;border-radius:7px;}
+.btn[disabled]{opacity:.45;cursor:not-allowed;}
+#fileInput{display:none;}
+@keyframes pulseOnce{
+  0%{box-shadow:0 0 0 0 rgba(184,134,59,.65);}
+  70%{box-shadow:0 0 0 9px rgba(184,134,59,0);}
+  100%{box-shadow:0 0 0 0 rgba(184,134,59,0);}
+}
+.btn.pulse-once{animation:pulseOnce 1.4s ease-out 2;}
+
+/* Toast */
+.toast{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+  background:var(--ink);color:#fff;padding:13px 20px;border-radius:10px;font-size:13.5px;
+  box-shadow:0 12px 30px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:.25s ease;
+  z-index:80;max-width:520px;text-align:center;line-height:1.4;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ---------- Tabs ---------- */
+.tabs{display:flex;gap:6px;padding-top:6px;}
+.tab-btn{
+  padding:9px 4px;margin-right:22px;background:none;border:none;cursor:pointer;
+  color:#9AA3AF;font-weight:600;font-size:14.5px;border-bottom:2.5px solid transparent;
+  letter-spacing:.15px;
+}
+.tab-btn.active{color:#fff;border-bottom-color:var(--gold);}
+
+/* ---------- Empty state ---------- */
+.empty-wrap{
+  min-height:78vh;display:flex;align-items:center;justify-content:center;padding:40px 20px;
+}
+.empty-card{
+  max-width:560px;text-align:center;background:var(--paper-raised);
+  border:1px solid var(--line);border-radius:16px;padding:44px 40px;box-shadow:var(--shadow);
+}
+.empty-card .glyph{
+  width:64px;height:64px;margin:0 auto 18px;border-radius:14px;
+  background:var(--blueprint-soft);display:flex;align-items:center;justify-content:center;
+}
+.empty-card h2{margin:0 0 10px;font-size:24px;}
+.empty-card p{margin:0 0 26px;color:var(--ink-soft);font-size:14.5px;line-height:1.6;}
+.drop-zone{
+  border:1.5px dashed var(--line-strong);border-radius:12px;padding:26px;
+  cursor:pointer;transition:.15s;background:var(--paper);
+}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--gold);background:var(--gold-soft);}
+.drop-zone .dz-title{font-weight:600;font-size:14px;margin-bottom:4px;}
+.drop-zone .dz-sub{font-size:12.5px;color:var(--neutral);}
+.empty-hint{margin-top:18px;font-size:12px;color:var(--neutral);}
+
+/* ---------- Content ---------- */
+.content{padding:26px 0 70px;}
+.page{display:none;}
+.page.active{display:block;}
+
+/* Section headers */
+.section-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:14px;flex-wrap:wrap;}
+.section-head h2{margin:0;font-size:20px;font-weight:600;}
+.section-head .section-sub{font-size:12.5px;color:var(--neutral);}
+
+/* KPI cards */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:22px;}
+@media (max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr);}}
+.kpi{
+  background:var(--paper-raised);border:1px solid var(--line);border-radius:12px;
+  padding:16px 16px 14px;cursor:pointer;transition:.12s;position:relative;overflow:hidden;
+}
+.kpi:hover{transform:translateY(-1px);box-shadow:var(--shadow);}
+.kpi.active{border-color:var(--ink);}
+.kpi .bar{position:absolute;left:0;top:0;bottom:0;width:4px;}
+.kpi .kpi-label{font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--neutral);font-weight:600;}
+.kpi .kpi-value{font-family:'Fraunces',serif;font-size:30px;font-weight:600;margin-top:6px;line-height:1;}
+.kpi .kpi-foot{font-size:12px;color:var(--ink-soft);margin-top:6px;}
+
+/* Filter bar */
+.filter-bar{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  background:var(--paper-raised);border:1px solid var(--line);border-radius:12px;
+  padding:12px 14px;margin-bottom:18px;
+}
+.filter-group{display:flex;flex-direction:column;gap:4px;}
+.filter-group label{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--neutral);font-weight:700;}
+select,.search-input{
+  font-family:inherit;font-size:13px;padding:7px 10px;border-radius:7px;
+  border:1px solid var(--line-strong);background:#fff;color:var(--ink);min-width:150px;
+}
+.search-input{min-width:210px;}
+select:focus,.search-input:focus{outline:2px solid var(--blueprint);outline-offset:1px;}
+.filter-spacer{flex:1;}
+.reset-link{font-size:12.5px;color:var(--blueprint);cursor:pointer;font-weight:600;background:none;border:none;padding:6px 4px;}
+.reset-link:hover{text-decoration:underline;}
+
+/* Status badge */
+.badge{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 8px;border-radius:999px;
+  font-size:11.5px;font-weight:700;letter-spacing:.2px;white-space:nowrap;
+}
+.badge .dot{width:6px;height:6px;border-radius:50%;}
+.badge.crit{background:var(--crit-soft);color:var(--crit);}
+.badge.crit .dot{background:var(--crit);}
+.badge.preco{background:var(--preco-soft);color:var(--preco);}
+.badge.preco .dot{background:var(--preco);}
+.badge.volume{background:var(--volume-soft);color:var(--volume);}
+.badge.volume .dot{background:var(--volume);}
+.badge.ok{background:var(--ok-soft);color:var(--ok);}
+.badge.ok .dot{background:var(--ok);}
+.badge.neutral{background:var(--neutral-soft);color:var(--neutral);}
+.badge.neutral .dot{background:var(--neutral);}
+
+/* Table */
+.table-card{background:var(--paper-raised);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);}
+.table-scroll{overflow-x:auto;}
+table.data{width:100%;border-collapse:collapse;font-size:13px;min-width:900px;}
+table.data.resizable{table-layout:fixed;}
+table.data th{position:relative;}
+.col-resize-handle{
+  position:absolute;top:0;right:-3px;width:7px;height:100%;cursor:col-resize;
+  user-select:none;touch-action:none;z-index:6;
+}
+.col-resize-handle::after{
+  content:"";position:absolute;top:8px;bottom:8px;right:3px;width:2px;background:var(--line-strong);
+  border-radius:2px;
+}
+.col-resize-handle:hover::after,.col-resize-handle.resizing::after{background:var(--gold);width:3px;}
+.col-resize-hint{font-size:11px;color:var(--blueprint);cursor:pointer;font-weight:600;background:none;border:none;padding:6px 4px;}
+.col-resize-hint:hover{text-decoration:underline;}
+table.data thead th{
+  text-align:right;padding:11px 14px;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;
+  color:var(--neutral);font-weight:700;border-bottom:1px solid var(--line);white-space:nowrap;
+  background:#FAF8F2;
+}
+table.data thead th:first-child,table.data thead th.txt{text-align:left;}
+table.data tbody td{padding:10px 14px;border-bottom:1px solid #EEEBE1;text-align:right;white-space:nowrap;}
+table.data tbody td:first-child,table.data tbody td.txt{text-align:left;}
+table.data tbody tr:last-child td{border-bottom:none;}
+table.data tbody tr.row-group{background:#FAF8F2;cursor:pointer;font-weight:600;}
+table.data tbody tr.row-group:hover{background:#F4F0E4;}
+table.data tbody tr.row-child{cursor:pointer;}
+table.data tbody tr.row-child:hover{background:#FBFAF6;}
+table.data tbody tr.row-grandchild{background:#FDFCF9;font-size:12.5px;color:var(--ink-soft);}
+table.data tbody tr.row-grandchild:hover{background:#F8F5EC;}
+table.data tbody tr.row-flat{cursor:default;}
+table.data tbody tr.row-flat.clickable{cursor:pointer;}
+table.data tbody tr.row-flat.clickable:hover{background:#F6F3EA;}
+table.data tbody tr.band-b{background:#FBFAF6;}
+table.data tbody tr.band-b.clickable:hover{background:#F4F1E6;}
+.reg-tag{font-weight:600;color:var(--ink-soft);font-size:12px;}
+.detail-hint{font-size:11px;color:var(--blueprint);font-weight:600;white-space:nowrap;}
+.indent{display:inline-flex;align-items:center;gap:8px;}
+.twisty{
+  width:16px;height:16px;flex:none;display:inline-flex;align-items:center;justify-content:center;
+  color:var(--neutral);transition:transform .12s;
+}
+.twisty.open{transform:rotate(90deg);}
+.cell-sub{color:var(--neutral);font-size:11px;font-weight:400;margin-top:1px;}
+.delta-pos{color:var(--ok);}
+.delta-neg{color:var(--crit);}
+.num-strong{font-weight:600;font-family:'IBM Plex Mono',monospace;font-size:12.5px;}
+
+/* progress bar mini */
+.mini-bar{width:70px;height:6px;background:var(--neutral-soft);border-radius:4px;overflow:hidden;display:inline-block;vertical-align:middle;}
+.mini-bar > span{display:block;height:100%;border-radius:4px;}
+
+.footnote{font-size:11.5px;color:var(--neutral);padding:12px 14px;border-top:1px solid var(--line);background:#FAF8F2;}
+
+/* Modal / info */
+.info-btn{
+  width:18px;height:18px;border-radius:50%;background:var(--neutral-soft);color:var(--ink-soft);
+  border:none;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+}
+.overlay{position:fixed;inset:0;background:rgba(23,26,33,.55);display:none;align-items:center;justify-content:center;z-index:50;padding:20px;}
+.overlay.show{display:flex;}
+.modal{background:#fff;border-radius:14px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto;padding:26px 28px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.modal.modal-wide{max-width:840px;}
+.modal h3{margin-top:0;}
+.modal .close-x{float:right;background:none;border:none;font-size:20px;cursor:pointer;color:var(--neutral);}
+.modal ul{padding-left:18px;font-size:13.5px;line-height:1.7;color:var(--ink-soft);}
+.modal code{background:var(--neutral-soft);padding:1px 5px;border-radius:4px;font-size:12px;}
+.modal .modal-eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--neutral);font-weight:700;margin-bottom:4px;}
+.modal .modal-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0 20px;}
+@media(max-width:600px){.modal .modal-stats{grid-template-columns:repeat(2,1fr);}}
+.modal .stat-box{background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:10px 12px;}
+.modal .stat-box .stat-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--neutral);font-weight:700;}
+.modal .stat-box .stat-value{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:600;margin-top:3px;}
+.modal table.mini-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;}
+.modal table.mini-table th{text-align:right;padding:6px 8px;font-size:10px;text-transform:uppercase;color:var(--neutral);border-bottom:1px solid var(--line);}
+.modal table.mini-table th:first-child{text-align:left;}
+.modal table.mini-table td{text-align:right;padding:6px 8px;border-bottom:1px solid #EEEBE1;}
+.modal table.mini-table td:first-child{text-align:left;}
+
+/* scrollbar */
+::-webkit-scrollbar{height:9px;width:9px;}
+::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+
+.two-col{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;}
+@media(max-width:980px){.two-col{grid-template-columns:1fr;}}
+
+.small-title{font-size:14px;font-weight:600;margin:0 0 12px;display:flex;align-items:center;gap:8px;}
+.legend-row{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-soft);margin-top:10px;}
+.legend-row .item{display:flex;align-items:center;gap:6px;}
+.legend-row .sw{width:9px;height:9px;border-radius:2px;}
+
+.empty-filter{padding:40px 20px;text-align:center;color:var(--neutral);font-size:13.5px;}
+
+.mobile-scroll-hint{display:none;font-size:11.5px;color:var(--blueprint);padding:8px 14px 0;font-weight:600;}
+
+/* ---------- Mobile ---------- */
+@media (max-width:760px){
+  .shell{padding:0 14px;}
+  .topbar{padding:14px 0 14px;gap:12px;}
+  .brand-mark{width:34px;height:34px;font-size:15px;}
+  .brand-text h1{font-size:16px;}
+  .brand-text p{font-size:11px;}
+  .topbar-actions{width:100%;gap:8px;}
+  .topbar-actions .btn,.topbar-actions .pill{flex:1 1 auto;justify-content:center;font-size:12px;padding:8px 10px;}
+  .tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;}
+  .tab-btn{white-space:nowrap;margin-right:16px;font-size:13px;}
+  .content{padding:16px 0 50px;}
+  .section-head{gap:8px;}
+  .section-head h2{font-size:17px;}
+  .kpi-row{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px;}
+  .kpi{padding:12px 12px 10px;}
+  .kpi .kpi-value{font-size:22px;}
+  .filter-bar{padding:10px;gap:8px;}
+  .filter-group{flex:1 1 130px;}
+  .filter-group select,.filter-group .search-input{min-width:0;width:100%;}
+  #vSearch,#rpsSearch{min-width:0;}
+  .filter-spacer{flex-basis:100%;height:0;}
+  .mobile-scroll-hint{display:block;}
+  table.data{font-size:12px;}
+  table.data thead th{padding:9px 10px;font-size:9.5px;}
+  table.data tbody td{padding:8px 10px;}
+  .modal{padding:20px 18px;max-height:85vh;}
+  .modal.modal-wide{max-width:100%;}
+  .modal .modal-stats{grid-template-columns:repeat(2,1fr);}
+  .toast{left:14px;right:14px;transform:translateX(0) translateY(20px);max-width:none;bottom:16px;}
+  .toast.show{transform:translateX(0) translateY(0);}
+}
+</style>
+</head>
+<body>
+
+<div class="blueprint-bg">
+  <div class="shell">
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-mark">SPI</div>
+        <div class="brand-text">
+          <h1>Preços &amp; Vendas · Imobiliário</h1>
+          <p id="updatedLabel">Nenhum dado carregado</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <span class="pill" id="statusPill"><span class="dot"></span><span id="statusText">Sem dados</span></span>
+        <button class="btn btn-primary btn-sm" id="btnDownload" style="display:none;">⬇ Baixar arquivo atualizado</button>
+        <button class="btn btn-ghost btn-sm" id="btnReupload" style="display:none;">Atualizar planilha</button>
+        <button class="btn btn-ghost btn-sm" id="btnClear" style="display:none;">Limpar dados</button>
+        <input type="file" id="fileInput" accept=".xlsx,.xls">
+      </div>
+    </div>
+    <nav class="tabs" id="mainTabs" style="display:none;">
+      <button class="tab-btn active" data-tab="rps">RPS · Reunião de Planejamento Semanal</button>
+      <button class="tab-btn" data-tab="vendas">Vendas</button>
+    </nav>
+  </div>
+</div>
+
+<div class="shell">
+  <div id="emptyState" class="empty-wrap">
+    <div class="empty-card">
+      <div class="glyph">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M4 19V6a1 1 0 0 1 1-1h6l2 2h6a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1Z" stroke="#2C4A6E" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      </div>
+      <h2>Carregue a planilha SPI</h2>
+      <p>Envie o arquivo Excel com as abas <strong>DETH_BASE</strong> e <strong>METAS</strong>. Depois de carregado, use "Baixar arquivo atualizado" para salvar os dados dentro deste próprio arquivo — assim ele fica pronto para atualizar diariamente e enviar à diretoria.</p>
+      <div class="drop-zone" id="dropZone">
+        <div class="dz-title">Arraste o arquivo .xlsx aqui</div>
+        <div class="dz-sub">ou clique para selecionar</div>
+      </div>
+      <div class="empty-hint">O processamento acontece no seu navegador — nada é enviado a servidores.</div>
+    </div>
+  </div>
+
+  <div class="content" id="mainContent" style="display:none;">
+    <!-- RPS PAGE -->
+    <div class="page active" id="page-rps"></div>
+    <!-- VENDAS PAGE -->
+    <div class="page" id="page-vendas"></div>
+  </div>
+</div>
+
+<div class="overlay" id="infoOverlay">
+  <div class="modal" id="infoModal"></div>
+</div>
+
+<div class="overlay" id="detailOverlay">
+  <div class="modal modal-wide" id="detailModal"></div>
+</div>
+
+<div class="overlay" id="welcomeOverlay">
+  <div class="modal" id="welcomeModal"></div>
+</div>
+
+<div class="overlay" id="curveOverlay">
+  <div class="modal modal-wide" id="curveModal"></div>
+</div>
+
+<script type="application/json" id="spi-embedded-data">null</script>
+<script>
+/* ============================================================
+   SPI · Preços & Vendas — motor de dados
+   Replica o racional de cálculo das abas DETH_BASE / METAS
+   ============================================================ */
+(function(){
+"use strict";
+
+const STORAGE_KEY = "spi_dashboard_v1";
+const STATUS_META = {
+  "Crítico":       {cls:"crit",   color:"#B23A2E", order:0},
+  "Devendo preço": {cls:"preco",  color:"#C77B23", order:1},
+  "Devendo volume":{cls:"volume", color:"#3A6EA5", order:2},
+  "Ok":            {cls:"ok",     color:"#2F7A52", order:3},
+  "Sem venda":     {cls:"neutral",color:"#8A8574", order:4}
+};
+
+let STATE = { rows: [], metas: [], curve: [], updatedAt: null, fileName: null };
+
+/* ---------------- helpers ---------------- */
+function normHeader(h){ return String(h||"").replace(/\s+/g," ").trim(); }
+function num(v){ v = typeof v === "string" ? v.replace(/\./g,"").replace(",",".") : v; const n = Number(v); return isFinite(n) ? n : 0; }
+function safeNum(v){ const n = Number(v); return isFinite(n) ? n : null; }
+function fmtMoney(v){
+  if(v===null||v===undefined||!isFinite(v)) return "—";
+  return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+}
+function fmtMoney2(v){
+  if(v===null||v===undefined||!isFinite(v)) return "—";
+  return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:2});
+}
+function fmtPct(v,d=1){
+  if(v===null||v===undefined||!isFinite(v)) return "—";
+  return (v*100).toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d})+"%";
+}
+function fmtNum(v){
+  if(v===null||v===undefined||!isFinite(v)) return "—";
+  return v.toLocaleString('pt-BR',{maximumFractionDigits:0});
+}
+function fmtDelta(v, isMoney){
+  if(v===null||v===undefined||!isFinite(v)) return "—";
+  const s = isMoney ? fmtMoney(Math.abs(v)) : fmtNum(Math.abs(v));
+  const sign = v>0 ? "+" : (v<0 ? "−" : "");
+  return sign + s;
+}
+function sum(arr, fn){ let s=0; for(const x of arr){ const v = fn(x); if(isFinite(v)) s+=v; } return s; }
+function avg(arr, fn){ if(!arr.length) return null; const s = sum(arr,fn); return s/arr.length; }
+function uniqueSorted(arr){ return Array.from(new Set(arr)).filter(Boolean).sort((a,b)=>a.localeCompare(b,'pt-BR')); }
+
+/* ---------------- header-based sheet reader ---------------- */
+function sheetToObjects(ws){
+  const aoa = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
+  if(!aoa.length) return [];
+  const headers = aoa[0].map(normHeader);
+  const out = [];
+  for(let r=1;r<aoa.length;r++){
+    const row = aoa[r];
+    if(row==null) continue;
+    let empty = true;
+    const obj = {};
+    for(let c=0;c<headers.length;c++){
+      const h = headers[c];
+      if(!h) continue;
+      const v = row[c];
+      if(v!==null && v!==undefined && v!=="") empty=false;
+      obj[h]=v;
+    }
+    if(!empty) out.push(obj);
+  }
+  return out;
+}
+
+/* ---------------- curve table (METAS!AK:AL) ---------------- */
+function readCurve(ws){
+  const aoa = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
+  const curve = [];
+  // AK is 0-indexed column 36, AL is 37
+  for(let r=2;r<aoa.length;r++){
+    const row = aoa[r];
+    if(!row) continue;
+    const dia = row[36];
+    const repr = row[37];
+    if(dia===null||dia===undefined) break;
+    if(typeof dia === "number" && typeof repr === "number"){
+      curve.push({dia, repr});
+    }
+  }
+  return curve;
+}
+function curveLookup(curve, dia){
+  if(!curve.length) return 1/30;
+  let best = curve[0];
+  for(const c of curve){
+    if(c.dia<=dia) best = c;
+    if(c.dia===dia) return c.repr;
+  }
+  return best.repr;
+}
+
+/* ---------------- main parse ---------------- */
+async function parseWorkbook(file){
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, {type:"array", cellDates:false});
+  const dethName = wb.SheetNames.find(n => normHeader(n).toUpperCase()==="DETH_BASE") || wb.SheetNames.find(n=>/DETH/i.test(n));
+  const metasName = wb.SheetNames.find(n => normHeader(n).toUpperCase()==="METAS") || wb.SheetNames.find(n=>/META/i.test(n));
+  if(!dethName || !metasName){
+    throw new Error("Não encontrei as abas DETH_BASE e/ou METAS no arquivo.");
+  }
+  const dethRaw = sheetToObjects(wb.Sheets[dethName]);
+  const metasRaw = sheetToObjects(wb.Sheets[metasName]);
+  const curve = readCurve(wb.Sheets[metasName]);
+
+  const rows = dethRaw.map(r => {
+    const canalLoja = r["CanalLoja"] || "";
+    const canal = canalLoja === "IMOB" ? "IMOB" : "HOUSE";
+    const precoTabela = num(r["$ Preço Tabela"]);
+    const precoProposta = num(r["$ Preço Proposta"]);
+    const desconto = Math.max(0, precoTabela - precoProposta);
+    const precoGerencial = safeNum(r["$ Preço Gerencial"]);
+    const ato = safeNum(r["$ Ato"]);
+    return {
+      diretor: r["Diretor"]||"",
+      regional: r["Regional"]||"",
+      cidade: r["Cidade"]||"",
+      empreendimento: r["Empreendimento"]||"",
+      bloco: r["Bloco"]||"",
+      nomeImovel: r["NomeImovel"]||"",
+      nomeLoja: r["NomeLoja"]||"",
+      tipologia: r["TipologiaCompleta"]||"(sem tipologia)",
+      canalLoja: canalLoja,
+      canal: canal,
+      margemBruta: safeNum(r["% Margem Bruta"]),
+      precoTabela: precoTabela,
+      precoProposta: precoProposta,
+      precoGerencial: precoGerencial,
+      desconto: desconto,
+      renda: safeNum(r["$ Renda"]),
+      rol: safeNum(r["$ ROL"]),
+      lucroBruto: safeNum(r["$ Lucro Bruto"]),
+      carteira: safeNum(r["$ Carteira"]),
+      ato: ato,
+      sinal: safeNum(r["$Sinal"]),
+      ltv: safeNum(r["LTV"]),
+      risco: safeNum(r["Risco"]),
+      parcela: safeNum(r["Valor da Parcela"]),
+      nParcelamento: safeNum(r["# Parcelamento"]),
+      pctAto: (ato!=null && precoGerencial) ? ato/precoGerencial : null
+    };
+  }).filter(r => r.empreendimento);
+
+  const metas = metasRaw.map(r => ({
+    empreendimento: r["Empreendimento"]||"",
+    cidade: r["Cidade"]||"",
+    regional: r["RegionalComercial"]||"",
+    vendasPlanejado: num(r["# Vendas Planejado"]),
+    precoPlanejado: num(r["$ Preço Gerencial Planejado"]),
+    vgvPlanejado: num(r["$ VGV Planejado"]),
+    metaTotalROL: num(r["Meta Total ROL"]),
+    metaTotalCPV: num(r["Meta Total CPV"])
+  })).filter(m => m.empreendimento);
+
+  return { rows, metas, curve, fileName: file.name, updatedAt: new Date().toISOString() };
+}
+
+/* ---------------- empreendimento-level computed table (mirrors METAS I:T) --------------- */
+function computeEmpreendimentos(state){
+  const rowsByEmp = new Map();
+  for(const r of state.rows){
+    if(!rowsByEmp.has(r.empreendimento)) rowsByEmp.set(r.empreendimento, []);
+    rowsByEmp.get(r.empreendimento).push(r);
+  }
+  const diaHoje = new Date().getDate();
+  const repr = curveLookup(state.curve, diaHoje);
+
+  const list = state.metas.map(m => {
+    const rows = rowsByEmp.get(m.empreendimento) || [];
+    const volumeReal = rows.length;
+    const precoReal = avg(rows, x=>x.precoGerencial);
+    const mgbReal = avg(rows, x=>x.margemBruta);
+    const lucroBrutoSum = sum(rows, x=>x.lucroBruto);
+    const rolSum = sum(rows, x=>x.rol);
+    const metaCPV = m.vendasPlanejado ? m.metaTotalCPV/m.vendasPlanejado : null;
+    const metaDia = Math.ceil(m.vendasPlanejado * repr);
+    const atingimentoPreco = (precoReal!=null) ? precoReal - m.precoPlanejado : null;
+    const faltaRaw = metaDia - volumeReal;
+    const faltaMeta = Math.max(0, faltaRaw);
+    const denom = m.vendasPlanejado - volumeReal;
+    let precoMinimoMeta = null;
+    if(denom !== 0 && precoReal!=null){
+      precoMinimoMeta = ((m.vendasPlanejado*m.precoPlanejado) - (volumeReal*precoReal)) / denom;
+    }
+    const metaMargem = m.metaTotalROL ? (m.metaTotalROL - m.metaTotalCPV)/m.metaTotalROL : null;
+
+    let situacao;
+    if(volumeReal===0) situacao = "Sem venda";
+    else if(atingimentoPreco<0 && faltaMeta>0) situacao = "Crítico";
+    else if(atingimentoPreco<0) situacao = "Devendo preço";
+    else if(faltaMeta>0) situacao = "Devendo volume";
+    else situacao = "Ok";
+
+    return {
+      empreendimento: m.empreendimento, cidade: m.cidade, regional: m.regional,
+      vendasPlanejado: m.vendasPlanejado, precoPlanejado: m.precoPlanejado,
+      vgvPlanejado: m.vgvPlanejado, metaTotalROL: m.metaTotalROL, metaTotalCPV: m.metaTotalCPV,
+      metaCPV, lucroBrutoSum, rolSum, volumeReal, precoReal, mgbReal,
+      atingimentoPreco, metaDia, faltaMeta, precoMinimoMeta, metaMargem, situacao,
+      rows
+    };
+  });
+  return { list, diaHoje, repr };
+}
+
+/* ---------------- largura de colunas ajustável pelo usuário ---------------- */
+/* Preferência pessoal de cada pessoa que abre o arquivo — fica salva só no navegador
+   dela (localStorage), nunca é embutida nos dados do arquivo compartilhado. */
+const COL_WIDTHS_KEY = "spi_col_widths_v1";
+function loadColWidths(){
+  try{ return JSON.parse(localStorage.getItem(COL_WIDTHS_KEY)) || {}; }catch(err){ return {}; }
+}
+function saveColWidths(widths){
+  try{ localStorage.setItem(COL_WIDTHS_KEY, JSON.stringify(widths)); }catch(err){ /* ignore */ }
+}
+let COL_WIDTHS = loadColWidths();
+
+function makeResizableTable(table, tableKey, defaultWidths){
+  if(!table) return;
+  table.classList.add("resizable");
+
+  let colgroup = table.querySelector("colgroup");
+  if(colgroup) colgroup.remove();
+  colgroup = document.createElement("colgroup");
+  table.insertBefore(colgroup, table.firstChild);
+
+  const stored = COL_WIDTHS[tableKey] || {};
+  const cols = [];
+  defaultWidths.forEach((def, i) => {
+    const col = document.createElement("col");
+    col.style.width = (stored[i] || def) + "px";
+    colgroup.appendChild(col);
+    cols.push(col);
+  });
+
+  const ths = table.querySelectorAll("thead th");
+  ths.forEach((th, i) => {
+    if(i >= cols.length - 1) return; // sem alça na última coluna
+    const handle = document.createElement("div");
+    handle.className = "col-resize-handle";
+    th.appendChild(handle);
+    handle.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const startX = e.clientX;
+      const startWidth = cols[i].getBoundingClientRect().width || th.offsetWidth;
+      handle.classList.add("resizing");
+      document.body.style.cursor = "col-resize";
+      function onMove(ev){
+        const w = Math.max(46, Math.round(startWidth + (ev.clientX - startX)));
+        cols[i].style.width = w + "px";
+      }
+      function onUp(){
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+        handle.classList.remove("resizing");
+        document.body.style.cursor = "";
+        COL_WIDTHS[tableKey] = COL_WIDTHS[tableKey] || {};
+        COL_WIDTHS[tableKey][i] = parseInt(cols[i].style.width, 10);
+        saveColWidths(COL_WIDTHS);
+      }
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+    });
+  });
+}
+
+function resetColWidths(tableKey){
+  delete COL_WIDTHS[tableKey];
+  saveColWidths(COL_WIDTHS);
+}
+
+window.SPI = { STATE, STATUS_META, STORAGE_KEY,
+  parseWorkbook, computeEmpreendimentos,
+  fmtMoney, fmtMoney2, fmtPct, fmtNum, fmtDelta,
+  sum, avg, uniqueSorted, num, safeNum, normHeader,
+  makeResizableTable, resetColWidths
+};
+})();
+
+
+/* ============================================================
+   SPI · Renderização — página RPS (Reunião de Planejamento Semanal)
+   Matriz plana: Regional e Empreendimento sempre visíveis, sem acordeão.
+   ============================================================ */
+(function(){
+"use strict";
+const S = window.SPI;
+
+function badgeHTML(situacao){
+  const meta = S.STATUS_META[situacao] || S.STATUS_META["Sem venda"];
+  return `<span class="badge ${meta.cls}"><span class="dot"></span>${situacao}</span>`;
+}
+
+let rpsFilters = { situacao: "", regional: "", search: "" };
+
+function escHTML(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function escAttr(s){ return escHTML(s); }
+
+function renderRPS(empAll, meta){
+  const page = document.getElementById("page-rps");
+
+  // apply filters
+  let emp = empAll;
+  if(rpsFilters.situacao){
+    emp = emp.filter(e => e.situacao === rpsFilters.situacao);
+  }
+  if(rpsFilters.regional){
+    emp = emp.filter(e => e.regional === rpsFilters.regional);
+  }
+  if(rpsFilters.search){
+    const q = rpsFilters.search.toLowerCase();
+    emp = emp.filter(e => e.empreendimento.toLowerCase().includes(q) || e.cidade.toLowerCase().includes(q));
+  }
+  emp = emp.slice().sort((a,b)=> a.regional.localeCompare(b.regional,'pt-BR') || a.empreendimento.localeCompare(b.empreendimento,'pt-BR'));
+
+  // KPI counts (respect regional + search, not situacao, so cards stay togglable)
+  let kpiBase = empAll;
+  if(rpsFilters.regional) kpiBase = kpiBase.filter(e=>e.regional===rpsFilters.regional);
+  if(rpsFilters.search){
+    const q = rpsFilters.search.toLowerCase();
+    kpiBase = kpiBase.filter(e => e.empreendimento.toLowerCase().includes(q) || e.cidade.toLowerCase().includes(q));
+  }
+  const counts = {};
+  for(const k of Object.keys(S.STATUS_META)) counts[k]=0;
+  kpiBase.forEach(e=>counts[e.situacao]++);
+
+  const regionals = S.uniqueSorted(empAll.map(e=>e.regional));
+
+  const kpiOrder = ["Crítico","Devendo preço","Devendo volume","Ok","Sem venda"];
+  const kpiHTML = kpiOrder.map(k=>{
+    const m = S.STATUS_META[k];
+    const active = rpsFilters.situacao === k;
+    return `<div class="kpi ${active?'active':''}" data-situacao="${k}">
+      <div class="bar" style="background:${m.color}"></div>
+      <div class="kpi-label">${k}</div>
+      <div class="kpi-value" style="color:${m.color}">${counts[k]}</div>
+      <div class="kpi-foot">empreendimento${counts[k]===1?'':'s'}</div>
+    </div>`;
+  }).join("");
+
+  let rowsHTML = "";
+  if(!emp.length){
+    rowsHTML = `<tr><td colspan="11"><div class="empty-filter">Nenhum empreendimento encontrado com os filtros atuais.</div></td></tr>`;
+  }
+  let lastRegional = null, band = false;
+  for(const e of emp){
+    if(e.regional !== lastRegional){ band = !band; lastRegional = e.regional; }
+    const gapPreco = e.atingimentoPreco;
+    rowsHTML += `<tr class="row-flat ${band?'band-b':''}">
+      <td class="txt reg-tag">${escHTML(e.regional)}</td>
+      <td class="txt"><strong>${escHTML(e.empreendimento)}</strong><span class="cell-sub">&nbsp;${escHTML(e.cidade)}</span></td>
+      <td>${S.fmtNum(e.vendasPlanejado)}</td>
+      <td>${S.fmtNum(e.volumeReal)}</td>
+      <td>${S.fmtPct(e.mgbReal)}</td>
+      <td>${S.fmtMoney(e.precoPlanejado)}</td>
+      <td>${S.fmtMoney(e.precoReal)}</td>
+      <td>${S.fmtNum(e.metaDia)}</td>
+      <td class="${e.faltaMeta>0?'delta-neg':''}">${S.fmtNum(e.faltaMeta)}</td>
+      <td class="${gapPreco<0?'delta-neg':'delta-pos'}">${S.fmtDelta(gapPreco, true)}</td>
+      <td>${S.fmtMoney(e.precoMinimoMeta)}</td>
+      <td class="txt">${badgeHTML(e.situacao)}</td>
+    </tr>`;
+  }
+
+  page.innerHTML = `
+    <div class="section-head">
+      <div>
+        <h2>RPS — Reunião de Planejamento Semanal</h2>
+        <div class="section-sub">Dia ${meta.diaHoje} do mês · curva de meta aplicada: ${S.fmtPct(meta.repr)} do volume planejado esperado até hoje</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="reset-link" id="rpsCurvaBtn">📈 Curva de meta</button>
+        <button class="info-btn" id="rpsInfoBtn">i</button>
+      </div>
+    </div>
+
+    <div class="kpi-row" id="rpsKpis">${kpiHTML}</div>
+
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>Regional</label>
+        <select id="rpsRegionalSel">
+          <option value="">Todas as regionais</option>
+          ${regionals.map(r=>`<option value="${escAttr(r)}" ${rpsFilters.regional===r?'selected':''}>${escHTML(r)}</option>`).join("")}
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Buscar</label>
+        <input type="text" class="search-input" id="rpsSearch" placeholder="Empreendimento ou cidade..." value="${escAttr(rpsFilters.search)}">
+      </div>
+      <div class="filter-spacer"></div>
+      <button class="col-resize-hint" id="rpsResetCols">↺ Redefinir colunas</button>
+      <button class="reset-link" id="rpsReset">Limpar filtros</button>
+    </div>
+
+    <div class="table-card">
+      <div class="mobile-scroll-hint">↔ Arraste a tabela para o lado para ver todas as colunas · arraste a borda de uma coluna para redimensioná-la</div>
+      <div class="table-scroll">
+        <table class="data" id="rpsTable">
+          <thead><tr>
+            <th class="txt">Regional</th>
+            <th class="txt">Empreendimento</th>
+            <th>Planejado</th>
+            <th>Vendas</th>
+            <th>%Mg. Bruta</th>
+            <th>Preço planejado</th>
+            <th>Preço real</th>
+            <th>Vendas ideal (hoje)</th>
+            <th>Gap vendas</th>
+            <th>Gap preço</th>
+            <th>Preço mínimo p/ meta</th>
+            <th class="txt">Situação</th>
+          </tr></thead>
+          <tbody>${rowsHTML}</tbody>
+        </table>
+      </div>
+      <div class="footnote">Todos os empreendimentos ficam listados lado a lado com sua regional — sem precisar clicar. Arraste a borda direita de uma coluna para ajustar sua largura. Situação: sem venda no mês · devendo preço (preço real abaixo do planejado) · devendo volume (abaixo da curva esperada até hoje) · crítico (ambos) · ok.</div>
+    </div>
+  `;
+
+  S.makeResizableTable(document.getElementById("rpsTable"), "rps-main", [130,230,90,80,90,130,130,110,100,110,140,150]);
+
+  // wire events
+  document.querySelectorAll("#rpsKpis .kpi").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const sit = el.getAttribute("data-situacao");
+      rpsFilters.situacao = (rpsFilters.situacao === sit) ? "" : sit;
+      window.SPI_render();
+    });
+  });
+  document.getElementById("rpsRegionalSel").addEventListener("change", e=>{
+    rpsFilters.regional = e.target.value; window.SPI_render();
+  });
+  const searchEl = document.getElementById("rpsSearch");
+  searchEl.addEventListener("input", e=>{ rpsFilters.search = e.target.value; window.SPI_render(true); });
+  document.getElementById("rpsReset").addEventListener("click", ()=>{
+    rpsFilters = {situacao:"", regional:"", search:""}; window.SPI_render();
+  });
+  document.getElementById("rpsResetCols").addEventListener("click", ()=>{
+    S.resetColWidths("rps-main"); window.SPI_render();
+  });
+  document.getElementById("rpsInfoBtn").addEventListener("click", ()=> showInfo("rps"));
+  document.getElementById("rpsCurvaBtn").addEventListener("click", ()=> window.SPI_openCurveEditor());
+}
+
+window.SPI_renderRPS = renderRPS;
+})();
+
+
+/* ============================================================
+   SPI · Renderização — página Vendas
+   1) Metas por Regional (fixo, como no Excel)
+   2) Matriz plana Regional × Empreendimento × Tipologia
+   3) Clique na linha abre modal com dados do comprador
+   ============================================================ */
+(function(){
+"use strict";
+const S = window.SPI;
+
+let vFilters = { regional:"", canal:"", search:"" };
+
+function escHTML(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function filteredRows(allRows){
+  let rows = allRows;
+  if(vFilters.canal) rows = rows.filter(r=>r.canal===vFilters.canal);
+  if(vFilters.regional) rows = rows.filter(r=>r.regional===vFilters.regional);
+  if(vFilters.search){
+    const q = vFilters.search.toLowerCase();
+    rows = rows.filter(r=>r.empreendimento.toLowerCase().includes(q) || r.cidade.toLowerCase().includes(q) || r.tipologia.toLowerCase().includes(q));
+  }
+  return rows;
+}
+
+function aggRows(rows){
+  const vendas = rows.length;
+  const vgv = S.sum(rows, r=>r.precoGerencial||0);
+  const atos = rows.map(r=>r.pctAto).filter(v=>v!=null && isFinite(v));
+  return {
+    vendas,
+    preco: S.avg(rows, r=>r.precoGerencial),
+    margem: S.avg(rows, r=>r.margemBruta),
+    vgv,
+    renda: S.avg(rows, r=>r.renda),
+    descontos: S.sum(rows, r=>r.desconto),
+    ltv: S.avg(rows, r=>r.ltv),
+    carteira: S.avg(rows, r=>r.carteira),
+    parcela: S.avg(rows, r=>r.parcela),
+    risco: S.avg(rows, r=>r.risco),
+    sinal: S.avg(rows, r=>r.sinal),
+    ato: S.avg(rows, r=>r.ato),
+    pctAto: S.avg(rows, r=>r.pctAto),
+    minAto: atos.length ? Math.min(...atos) : null,
+    maxAto: atos.length ? Math.max(...atos) : null
+  };
+}
+
+function miniBarCell(pct){
+  if(pct==null || !isFinite(pct)) return "—";
+  const color = pct>=1 ? "var(--ok)" : pct>=0.7 ? "var(--preco)" : "var(--crit)";
+  return `<span class="indent" style="justify-content:flex-end;">${S.fmtPct(pct,0)} <span class="mini-bar"><span style="width:${Math.min(100,pct*100)}%;background:${color}"></span></span></span>`;
+}
+
+/* ---------------- Metas por Regional (topo, fixo como no Excel) ---------------- */
+function renderRegionalTargets(rowsAll){
+  // canal filter still applies (cross-cutting dimension); regional/search do not, this block always lists every regional
+  const rows = vFilters.canal ? rowsAll.filter(r=>r.canal===vFilters.canal) : rowsAll;
+
+  const metaVendasByRegional = new Map();
+  for(const m of window.SPI_STATE.metas){
+    metaVendasByRegional.set(m.regional, (metaVendasByRegional.get(m.regional)||0) + m.vendasPlanejado);
+  }
+  const byRegional = new Map();
+  for(const r of rows){
+    if(!byRegional.has(r.regional)) byRegional.set(r.regional, []);
+    byRegional.get(r.regional).push(r);
+  }
+  // union of regionals from metas (targets) and from rows, so a regional with 0 sales still appears
+  const allRegionals = S.uniqueSorted(Array.from(new Set([...metaVendasByRegional.keys(), ...byRegional.keys()])));
+
+  let totalVendas=0, totalVgv=0, totalMeta=0;
+  let rowsHTML = "";
+  for(const reg of allRegionals){
+    const list = byRegional.get(reg) || [];
+    const a = aggRows(list);
+    const metaVendas = metaVendasByRegional.get(reg) || 0;
+    const atingimento = metaVendas ? a.vendas/metaVendas : null;
+    totalVendas += a.vendas; totalVgv += a.vgv; totalMeta += metaVendas;
+    const highlight = vFilters.regional === reg;
+    rowsHTML += `<tr class="row-flat clickable ${highlight?'band-b':''}" data-regional-toggle="${escHTML(reg)}" style="${highlight?'box-shadow:inset 3px 0 0 var(--gold);':''}">
+      <td class="txt reg-tag">${escHTML(reg)}${highlight?' <span class="detail-hint">· filtrando</span>':''}</td>
+      <td>${S.fmtNum(a.vendas)}</td>
+      <td>${S.fmtMoney(a.preco)}</td>
+      <td>${S.fmtPct(a.margem)}</td>
+      <td>${S.fmtMoney(a.vgv)}</td>
+      <td>${S.fmtNum(metaVendas)}</td>
+      <td>${miniBarCell(atingimento)}</td>
+    </tr>`;
+  }
+  const totalAtingimento = totalMeta ? totalVendas/totalMeta : null;
+  rowsHTML += `<tr class="row-flat" style="font-weight:700;border-top:2px solid var(--line-strong);">
+    <td class="txt">Total</td>
+    <td>${S.fmtNum(totalVendas)}</td>
+    <td>—</td>
+    <td>—</td>
+    <td>${S.fmtMoney(totalVgv)}</td>
+    <td>${S.fmtNum(totalMeta)}</td>
+    <td>${miniBarCell(totalAtingimento)}</td>
+  </tr>`;
+
+  return `
+    <div class="section-head" style="margin-top:2px;">
+      <div>
+        <h2 style="font-size:17px;">Metas por Regional</h2>
+        <div class="section-sub">SP INT 1–6, SENSIA CP e SENSIA RP — como na aba Vendas do Excel · clique numa regional para filtrar a matriz abaixo</div>
+      </div>
+    </div>
+    <div class="table-card" style="margin-bottom:26px;">
+      <div class="mobile-scroll-hint">↔ Arraste a tabela para o lado para ver todas as colunas · arraste a borda de uma coluna para redimensioná-la</div>
+      <div class="table-scroll">
+        <table class="data" id="vendasRegionalTable">
+          <thead><tr>
+            <th class="txt">Regional</th>
+            <th>Vendas</th>
+            <th>Preço médio</th>
+            <th>Margem</th>
+            <th>VGV</th>
+            <th>Meta vendas</th>
+            <th>Atingimento</th>
+          </tr></thead>
+          <tbody>${rowsHTML}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+/* ---------------- Matriz plana Regional × Empreendimento × Tipologia ---------------- */
+function renderVendas(empAll, metasByEmp, rowsAll){
+  const page = document.getElementById("page-vendas");
+  const rows = filteredRows(rowsAll);
+
+  const regionalsAll = S.uniqueSorted(rowsAll.map(r=>r.regional));
+  const canaisAll = S.uniqueSorted(rowsAll.map(r=>r.canalLoja));
+
+  // group by regional > empreendimento > tipologia, flattened into one row per combo
+  const key = (r) => r.regional+"|||"+r.empreendimento+"|||"+r.tipologia;
+  const groups = new Map();
+  for(const r of rows){
+    const k = key(r);
+    if(!groups.has(k)) groups.set(k, { regional:r.regional, empreendimento:r.empreendimento, cidade:r.cidade, tipologia:r.tipologia, rows:[] });
+    groups.get(k).rows.push(r);
+  }
+  const combos = Array.from(groups.values()).sort((a,b)=>
+    a.regional.localeCompare(b.regional,'pt-BR') ||
+    a.empreendimento.localeCompare(b.empreendimento,'pt-BR') ||
+    a.tipologia.localeCompare(b.tipologia,'pt-BR')
+  );
+
+  const totalVendas = rows.length;
+  const totalVgv = S.sum(rows, r=>r.precoGerencial||0);
+  const precoMedio = totalVendas ? totalVgv/totalVendas : null;
+  const margemMedia = S.avg(rows, r=>r.margemBruta);
+
+  let lastEmp = null, band = false;
+  let matrixRows = "";
+  if(!combos.length){
+    matrixRows = `<tr><td colspan="11"><div class="empty-filter">Nenhuma proposta encontrada com os filtros atuais.</div></td></tr>`;
+  }
+  window.__spiComboIndex = combos; // for click lookup
+  combos.forEach((c, i) => {
+    if(c.empreendimento !== lastEmp){ band = !band; lastEmp = c.empreendimento; }
+    const a = aggRows(c.rows);
+    const m = metasByEmp.get(c.empreendimento);
+    const vendasMeta = m ? m.vendasPlanejado : null;
+    const metaPreco = m ? m.precoPlanejado : null;
+    const metaMargem = m ? m.metaMargem : null;
+    const atingimento = vendasMeta ? a.vendas/vendasMeta : null;
+    matrixRows += `<tr class="row-flat clickable ${band?'band-b':''}" data-combo-idx="${i}">
+      <td class="txt reg-tag">${escHTML(c.regional)}</td>
+      <td class="txt"><strong>${escHTML(c.empreendimento)}</strong><span class="cell-sub">&nbsp;${escHTML(c.cidade)}</span></td>
+      <td class="txt">${escHTML(c.tipologia)}</td>
+      <td>${S.fmtNum(a.vendas)}</td>
+      <td>${S.fmtNum(vendasMeta)}</td>
+      <td>${miniBarCell(atingimento)}</td>
+      <td>${S.fmtMoney(a.preco)}</td>
+      <td>${S.fmtMoney(metaPreco)}</td>
+      <td>${S.fmtPct(a.margem)}</td>
+      <td>${S.fmtPct(metaMargem)}</td>
+      <td class="txt"><span class="detail-hint">Ver comprador ›</span></td>
+    </tr>`;
+  });
+
+  page.innerHTML = `
+    <div class="section-head">
+      <div>
+        <h2>Vendas</h2>
+        <div class="section-sub">${S.fmtNum(rows.length)} propostas no filtro atual · VGV ${S.fmtMoney(totalVgv)}</div>
+      </div>
+      <button class="info-btn" id="vendasInfoBtn">i</button>
+    </div>
+
+    ${renderRegionalTargets(rowsAll)}
+
+    <div class="section-head">
+      <div>
+        <h2 style="font-size:17px;">Empreendimentos × Tipologias</h2>
+        <div class="section-sub">Clique numa linha para ver renda, desconto, LTV e demais dados do comprador</div>
+      </div>
+    </div>
+
+    <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);">
+      <div class="kpi" style="cursor:default;">
+        <div class="bar" style="background:var(--blueprint)"></div>
+        <div class="kpi-label">Vendas no período</div>
+        <div class="kpi-value">${S.fmtNum(totalVendas)}</div>
+      </div>
+      <div class="kpi" style="cursor:default;">
+        <div class="bar" style="background:var(--gold)"></div>
+        <div class="kpi-label">Preço médio</div>
+        <div class="kpi-value" style="font-size:24px;">${S.fmtMoney(precoMedio)}</div>
+      </div>
+      <div class="kpi" style="cursor:default;">
+        <div class="bar" style="background:var(--ok)"></div>
+        <div class="kpi-label">VGV total</div>
+        <div class="kpi-value" style="font-size:24px;">${S.fmtMoney(totalVgv)}</div>
+      </div>
+      <div class="kpi" style="cursor:default;">
+        <div class="bar" style="background:var(--preco)"></div>
+        <div class="kpi-label">Margem média</div>
+        <div class="kpi-value">${S.fmtPct(margemMedia)}</div>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>Regional</label>
+        <select id="vRegionalSel">
+          <option value="">Todas</option>
+          ${regionalsAll.map(r=>`<option value="${escHTML(r)}" ${vFilters.regional===r?'selected':''}>${escHTML(r)}</option>`).join("")}
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Canal</label>
+        <select id="vCanalSel">
+          <option value="">Todos</option>
+          ${canaisAll.map(c=>`<option value="${escHTML(c)}" ${vFilters.canal===c?'selected':''}>${escHTML(c)}</option>`).join("")}
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Buscar</label>
+        <input type="text" class="search-input" id="vSearch" placeholder="Empreendimento, cidade ou tipologia..." value="${escHTML(vFilters.search)}">
+      </div>
+      <div class="filter-spacer"></div>
+      <button class="col-resize-hint" id="vResetCols">↺ Redefinir colunas</button>
+      <button class="reset-link" id="vReset">Limpar filtros</button>
+    </div>
+
+    <div class="table-card">
+      <div class="mobile-scroll-hint">↔ Arraste a tabela para o lado para ver todas as colunas · arraste a borda de uma coluna para redimensioná-la</div>
+      <div class="table-scroll">
+        <table class="data" id="vendasMatrixTable">
+          <thead><tr>
+            <th class="txt">Regional</th>
+            <th class="txt">Empreendimento</th>
+            <th class="txt">Tipologia</th>
+            <th>Vendas</th>
+            <th>Meta vendas</th>
+            <th>Atingimento</th>
+            <th>Preço real</th>
+            <th>Preço meta</th>
+            <th>Margem real</th>
+            <th>Margem meta</th>
+            <th class="txt"></th>
+          </tr></thead>
+          <tbody>${matrixRows}</tbody>
+        </table>
+      </div>
+      <div class="footnote">Regional, empreendimento e tipologia sempre visíveis lado a lado. Arraste a borda direita de uma coluna para ajustar sua largura. Meta de preço/margem por tipologia herda a meta do empreendimento (a planilha de metas não segrega por tipologia). Clique numa linha para abrir o detalhe do comprador.</div>
+    </div>
+  `;
+
+  S.makeResizableTable(document.getElementById("vendasRegionalTable"), "vendas-regional", [150,90,130,90,140,110,140]);
+  S.makeResizableTable(document.getElementById("vendasMatrixTable"), "vendas-matrix", [120,220,150,80,100,110,110,110,90,90,110]);
+
+  document.getElementById("vRegionalSel").addEventListener("change", e=>{ vFilters.regional=e.target.value; window.SPI_render(); });
+  document.getElementById("vCanalSel").addEventListener("change", e=>{ vFilters.canal=e.target.value; window.SPI_render(); });
+  const searchEl = document.getElementById("vSearch");
+  searchEl.addEventListener("input", e=>{ vFilters.search = e.target.value; window.SPI_render(true); });
+  document.getElementById("vReset").addEventListener("click", ()=>{ vFilters={regional:"",canal:"",search:""}; window.SPI_render(); });
+  document.getElementById("vResetCols").addEventListener("click", ()=>{
+    S.resetColWidths("vendas-regional"); S.resetColWidths("vendas-matrix"); window.SPI_render();
+  });
+  document.querySelectorAll("tr[data-combo-idx]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const idx = Number(el.getAttribute("data-combo-idx"));
+      openBuyerModal(window.__spiComboIndex[idx]);
+    });
+  });
+  document.querySelectorAll("tr[data-regional-toggle]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const key = el.getAttribute("data-regional-toggle");
+      vFilters.regional = (vFilters.regional === key) ? "" : key;
+      window.SPI_render();
+    });
+  });
+  document.getElementById("vendasInfoBtn").addEventListener("click", ()=> showInfo("vendas"));
+}
+
+/* ---------------- Modal: dados do comprador ---------------- */
+function openBuyerModal(combo){
+  const a = aggRows(combo.rows);
+  const rowsHTML = combo.rows.map(r => `
+    <tr>
+      <td>${escHTML(r.canalLoja||"—")}</td>
+      <td>${S.fmtMoney(r.precoGerencial)}</td>
+      <td>${S.fmtMoney(r.renda)}</td>
+      <td>${S.fmtMoney(r.desconto)}</td>
+      <td>${S.fmtPct(r.ltv)}</td>
+      <td>${S.fmtMoney(r.ato)}</td>
+      <td>${S.fmtPct(r.pctAto)}</td>
+      <td>${S.fmtMoney(r.parcela)}</td>
+    </tr>
+  `).join("");
+
+  document.getElementById("detailModal").innerHTML = `
+    <button class="close-x" id="closeDetailBtn">&times;</button>
+    <div class="modal-eyebrow">${escHTML(combo.regional)} · ${escHTML(combo.cidade)}</div>
+    <h3 style="margin-bottom:2px;">${escHTML(combo.empreendimento)}</h3>
+    <div style="color:var(--neutral);font-size:13px;margin-bottom:6px;">${escHTML(combo.tipologia)} · ${combo.rows.length} venda${combo.rows.length===1?'':'s'}</div>
+
+    <div class="modal-stats">
+      <div class="stat-box"><div class="stat-label">Renda média</div><div class="stat-value">${S.fmtMoney(a.renda)}</div></div>
+      <div class="stat-box"><div class="stat-label">Descontos (total)</div><div class="stat-value">${S.fmtMoney(a.descontos)}</div></div>
+      <div class="stat-box"><div class="stat-label">LTV médio</div><div class="stat-value">${S.fmtPct(a.ltv)}</div></div>
+      <div class="stat-box"><div class="stat-label">Carteira média</div><div class="stat-value">${S.fmtMoney(a.carteira)}</div></div>
+      <div class="stat-box"><div class="stat-label">Valor da parcela</div><div class="stat-value">${S.fmtMoney(a.parcela)}</div></div>
+      <div class="stat-box"><div class="stat-label">Risco médio</div><div class="stat-value">${S.fmtPct(a.risco)}</div></div>
+      <div class="stat-box"><div class="stat-label">Sinal médio</div><div class="stat-value">${S.fmtMoney(a.sinal)}</div></div>
+      <div class="stat-box"><div class="stat-label">Ato médio (% ato)</div><div class="stat-value">${S.fmtMoney(a.ato)} <span style="font-size:11px;color:var(--neutral);">(${S.fmtPct(a.pctAto)}, ${S.fmtPct(a.minAto)}–${S.fmtPct(a.maxAto)})</span></div></div>
+    </div>
+
+    <div class="small-title" style="margin-bottom:4px;">Vendas individuais</div>
+    <table class="mini-table">
+      <thead><tr>
+        <th>Canal</th><th>Preço</th><th>Renda</th><th>Desconto</th><th>LTV</th><th>Ato</th><th>% Ato</th><th>Parcela</th>
+      </tr></thead>
+      <tbody>${rowsHTML}</tbody>
+    </table>
+  `;
+  document.getElementById("detailOverlay").classList.add("show");
+  document.getElementById("closeDetailBtn").addEventListener("click", ()=>{
+    document.getElementById("detailOverlay").classList.remove("show");
+  });
+}
+document.addEventListener("click", e=>{ if(e.target.id==="detailOverlay") e.target.classList.remove("show"); });
+
+window.SPI_renderVendas = renderVendas;
+})();
+
+
+/* ============================================================
+   SPI · App shell — upload, persistência embutida no arquivo,
+   tabs, orquestração
+   ============================================================ */
+(function(){
+"use strict";
+const S = window.SPI;
+
+let activeTab = "rps";
+let fileHandle = null; // quando o navegador suporta salvar direto no mesmo arquivo
+window.SPI_STATE = { rows:[], metas:[], curve:[], metasByEmp:new Map(), empList:[], meta:{}, fileName:null, updatedAt:null };
+
+/* ---------------- persistência embutida no próprio arquivo ---------------- */
+/* Os dados carregados ficam gravados dentro de uma tag <script type="application/json">
+   deste mesmo HTML. Ao salvar/baixar o arquivo, esses dados viajam junto — assim o
+   arquivo pode ser reaberto por qualquer pessoa, em qualquer computador, sem internet
+   e sem repetir nenhum passo, já com os números do dia. */
+function readEmbeddedData(){
+  try{
+    const tag = document.getElementById("spi-embedded-data");
+    if(!tag) return null;
+    const txt = tag.textContent.trim();
+    if(!txt || txt === "null") return null;
+    return JSON.parse(txt);
+  }catch(err){ console.error("Falha ao ler dados embutidos", err); return null; }
+}
+
+/* fallback local (mesma máquina/navegador) enquanto o usuário ainda não salvou o arquivo */
+function saveLocal(state){
+  try{
+    const payload = { rows: state.rows, metas: state.metas, curve: state.curve, fileName: state.fileName, updatedAt: state.updatedAt };
+    localStorage.setItem(S.STORAGE_KEY, JSON.stringify(payload));
+  }catch(err){ console.error("Falha ao salvar no localStorage", err); }
+}
+function loadLocal(){
+  try{
+    const raw = localStorage.getItem(S.STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(err){ return null; }
+}
+function clearLocal(){ localStorage.removeItem(S.STORAGE_KEY); }
+
+function pad2(n){ return String(n).padStart(2,"0"); }
+function todayFileName(){
+  const now = new Date();
+  return `SPI - Precos e Vendas - ${pad2(now.getDate())}-${pad2(now.getMonth()+1)}-${now.getFullYear()}.html`;
+}
+const canUseFilePicker = typeof window.showSaveFilePicker === "function";
+
+function buildCurrentHTML(){
+  const state = window.SPI_STATE;
+  const payload = { rows: state.rows, metas: state.metas, curve: state.curve, fileName: state.fileName, updatedAt: state.updatedAt };
+  const json = JSON.stringify(payload).replace(/</g, "\\u003c"); // evita fechar a tag <script> prematuramente
+  document.getElementById("spi-embedded-data").textContent = json;
+
+  // limpa estados visuais transitórios antes de tirar o "retrato" do HTML
+  document.getElementById("infoOverlay").classList.remove("show");
+  document.getElementById("detailOverlay").classList.remove("show");
+  document.getElementById("welcomeOverlay") && document.getElementById("welcomeOverlay").classList.remove("show");
+  document.getElementById("curveOverlay") && document.getElementById("curveOverlay").classList.remove("show");
+  document.getElementById("btnDownload").classList.remove("pulse-once");
+  const dz = document.getElementById("dropZone");
+  if(dz) dz.classList.remove("dragover");
+
+  return "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+}
+
+function classicDownload(html){
+  const blob = new Blob([html], {type: "text/html"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = todayFileName();
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=> URL.revokeObjectURL(url), 4000);
+}
+
+/* Salva os dados dentro do arquivo. Em navegadores compatíveis (Chrome/Edge no
+   computador), grava direto no mesmo arquivo já aberto — sem gerar cópias soltas.
+   Nos demais navegadores, baixa uma nova versão do arquivo com os dados dentro. */
+async function saveIntoFile(){
+  const html = buildCurrentHTML();
+
+  if(canUseFilePicker){
+    try{
+      if(!fileHandle){
+        fileHandle = await window.showSaveFilePicker({
+          suggestedName: todayFileName(),
+          types: [{ description: "Página HTML", accept: { "text/html": [".html"] } }]
+        });
+      }
+      const writable = await fileHandle.createWritable();
+      await writable.write(html);
+      await writable.close();
+      return { ok:true, method:"picker", name: fileHandle.name };
+    }catch(err){
+      if(err && err.name === "AbortError") return { ok:false, method:"cancelled" };
+      console.error("Falha ao salvar via seletor de arquivo, usando download:", err);
+      fileHandle = null;
+      classicDownload(html);
+      return { ok:true, method:"download", name: todayFileName() };
+    }
+  }
+
+  classicDownload(html);
+  return { ok:true, method:"download", name: todayFileName() };
+}
+
+/* ---------------- toast de confirmação ---------------- */
+function showToast(msg){
+  let t = document.getElementById("spiToast");
+  if(!t){
+    t = document.createElement("div");
+    t.id = "spiToast";
+    t.className = "toast";
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t._hideTimer);
+  t._hideTimer = setTimeout(()=> t.classList.remove("show"), 4200);
+}
+
+/* ---------------- derive & render ---------------- */
+function deriveAndRender(preserveFocus){
+  const state = window.SPI_STATE;
+  const { list, diaHoje, repr } = S.computeEmpreendimentos(state);
+  state.empList = list;
+  state.meta = { diaHoje, repr };
+  state.metasByEmp = new Map(list.map(e=>[e.empreendimento, e]));
+
+  if(activeTab === "rps"){
+    window.SPI_renderRPS(list, state.meta);
+  } else {
+    window.SPI_renderVendas(list, state.metasByEmp, state.rows);
+  }
+
+  if(preserveFocus){
+    const id = activeTab === "rps" ? "rpsSearch" : "vSearch";
+    const el = document.getElementById(id);
+    if(el){ el.focus(); const v=el.value; el.value=""; el.value=v; }
+  }
+}
+window.SPI_render = deriveAndRender;
+
+/* ---------------- UI wiring ---------------- */
+function setLoadedUI(state){
+  document.getElementById("emptyState").style.display = "none";
+  document.getElementById("mainContent").style.display = "block";
+  document.getElementById("mainTabs").style.display = "flex";
+  document.getElementById("btnReupload").style.display = "inline-flex";
+  document.getElementById("btnClear").style.display = "inline-flex";
+  document.getElementById("btnDownload").style.display = "inline-flex";
+  document.getElementById("btnDownload").textContent = canUseFilePicker ? "💾 Salvar dados no arquivo" : "⬇ Baixar arquivo com os dados";
+  const d = state.updatedAt ? new Date(state.updatedAt) : null;
+  document.getElementById("updatedLabel").textContent = d
+    ? `${state.fileName || "planilha"} · atualizado em ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`
+    : "Dados carregados";
+  document.getElementById("statusText").textContent = `${state.rows.length.toLocaleString('pt-BR')} propostas`;
+  document.getElementById("statusPill").classList.remove("warn");
+}
+
+async function handleFile(file){
+  const pill = document.getElementById("statusPill");
+  const txt = document.getElementById("statusText");
+  txt.textContent = "Processando...";
+  try{
+    const parsed = await S.parseWorkbook(file);
+    window.SPI_STATE.rows = parsed.rows;
+    window.SPI_STATE.metas = parsed.metas;
+    // se a planilha nova não trouxer a tabela de curva (ex.: aba METAS sem a coluna
+    // "Curva de meta"), preserva a curva já carregada em vez de zerar o cálculo do RPS
+    window.SPI_STATE.curve = (parsed.curve && parsed.curve.length) ? parsed.curve : window.SPI_STATE.curve;
+    window.SPI_STATE.fileName = parsed.fileName;
+    window.SPI_STATE.updatedAt = parsed.updatedAt;
+    saveLocal(window.SPI_STATE);
+    setLoadedUI(window.SPI_STATE);
+    deriveAndRender();
+    showWelcomePrompt();
+  }catch(err){
+    console.error(err);
+    pill.classList.add("warn");
+    txt.textContent = "Erro ao ler arquivo";
+    alert("Não foi possível processar o arquivo.\n\n" + err.message + "\n\nConfira se ele contém as abas DETH_BASE e METAS.");
+  }
+}
+
+/* Aviso obrigatório logo após carregar os dados — garante que a pessoa não esqueça
+   de salvar/baixar o arquivo com os dados dentro antes de fechar ou enviar. */
+function showWelcomePrompt(){
+  const box = document.getElementById("welcomeModal");
+  box.innerHTML = `
+    <h3 style="margin-bottom:6px;">Dados carregados ✓</h3>
+    <p style="color:var(--ink-soft);font-size:13.5px;line-height:1.6;">
+      Para que quem receber este arquivo veja essas informações sem precisar de nada mais
+      (nem internet, nem subir planilha de novo), os dados precisam ficar salvos <strong>dentro
+      deste próprio arquivo</strong>.
+    </p>
+    <p style="color:var(--ink-soft);font-size:13.5px;line-height:1.6;">
+      ${canUseFilePicker
+        ? "Clique abaixo para salvar agora — você escolhe onde, e pode sobrescrever o mesmo arquivo todos os dias."
+        : "Clique abaixo para baixar a versão atualizada do arquivo, já com os dados dentro."}
+    </p>
+    <div style="display:flex;gap:10px;margin-top:18px;">
+      <button class="btn btn-primary" id="welcomeSaveBtn" style="flex:1;justify-content:center;">${canUseFilePicker ? "💾 Salvar arquivo" : "⬇ Baixar arquivo"}</button>
+      <button class="btn btn-outline" id="welcomeLaterBtn">Depois</button>
+    </div>
+    <p style="font-size:11.5px;color:var(--neutral);margin-top:14px;margin-bottom:0;">Envie este arquivo .html (não a planilha Excel) para quem for visualizar.</p>
+  `;
+  document.getElementById("welcomeOverlay").classList.add("show");
+  document.getElementById("welcomeSaveBtn").addEventListener("click", async ()=>{
+    document.getElementById("welcomeOverlay").classList.remove("show");
+    await doSave();
+  });
+  document.getElementById("welcomeLaterBtn").addEventListener("click", ()=>{
+    document.getElementById("welcomeOverlay").classList.remove("show");
+    flashDownloadHint();
+  });
+}
+
+function flashDownloadHint(){
+  const btn = document.getElementById("btnDownload");
+  btn.classList.add("pulse-once");
+  setTimeout(()=> btn.classList.remove("pulse-once"), 1600);
+}
+
+async function doSave(){
+  const btn = document.getElementById("btnDownload");
+  const prevLabel = btn.textContent;
+  btn.setAttribute("disabled","disabled");
+  btn.textContent = "Salvando...";
+  try{
+    const result = await saveIntoFile();
+    if(result.ok){
+      if(result.method === "picker") showToast(`Salvo em "${result.name}". Envie esse arquivo — quem abrir já vê os dados.`);
+      else showToast(`Arquivo baixado (verifique sua pasta Downloads). Envie esse arquivo — quem abrir já vê os dados.`);
+    }
+  } finally {
+    btn.removeAttribute("disabled");
+    btn.textContent = prevLabel;
+  }
+}
+
+function initUpload(){
+  const fileInput = document.getElementById("fileInput");
+  const dropZone = document.getElementById("dropZone");
+  const btnReupload = document.getElementById("btnReupload");
+  const btnDownload = document.getElementById("btnDownload");
+
+  dropZone.addEventListener("click", ()=> fileInput.click());
+  btnReupload.addEventListener("click", ()=> fileInput.click());
+  fileInput.addEventListener("change", e=>{
+    if(e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+    fileInput.value = "";
+  });
+  ["dragenter","dragover"].forEach(ev=>{
+    dropZone.addEventListener(ev, e=>{ e.preventDefault(); dropZone.classList.add("dragover"); });
+  });
+  ["dragleave","drop"].forEach(ev=>{
+    dropZone.addEventListener(ev, e=>{ e.preventDefault(); dropZone.classList.remove("dragover"); });
+  });
+  dropZone.addEventListener("drop", e=>{
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f) handleFile(f);
+  });
+
+  btnDownload.addEventListener("click", doSave);
+
+  document.getElementById("btnClear").addEventListener("click", ()=>{
+    if(!confirm("Isso vai apagar os dados carregados neste arquivo/navegador. Continuar?")) return;
+    clearLocal();
+    fileHandle = null;
+    const tag = document.getElementById("spi-embedded-data");
+    if(tag) tag.textContent = "null";
+    window.location.reload();
+  });
+}
+
+function initTabs(){
+  document.querySelectorAll(".tab-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      activeTab = btn.getAttribute("data-tab");
+      document.getElementById("page-rps").classList.toggle("active", activeTab==="rps");
+      document.getElementById("page-vendas").classList.toggle("active", activeTab==="vendas");
+      deriveAndRender();
+    });
+  });
+}
+
+/* ---------------- info modal ---------------- */
+const INFO = {
+  rps: {
+    title: "Como o RPS é calculado",
+    body: `
+      <p style="font-size:12.5px;color:var(--neutral);margin-top:-6px;">RPS = Reunião de Planejamento Semanal.</p>
+      <ul>
+        <li><strong>Vendas ideal (hoje)</strong> = vendas planejadas do empreendimento × % da curva de meta acumulada até o dia de hoje (mesma curva de referência da planilha METAS).</li>
+        <li><strong>Gap vendas</strong> = vendas ideal até hoje − vendas realizadas. Quando positivo, o empreendimento está atrás da curva.</li>
+        <li><strong>Gap preço</strong> = preço médio realizado (preço gerencial médio) − preço planejado.</li>
+        <li><strong>Preço mínimo p/ meta</strong> = preço médio necessário nas vendas restantes do mês para, somado ao já vendido, ainda bater o VGV planejado do empreendimento.</li>
+        <li><strong>Situação</strong>:
+          <ul>
+            <li><em>Sem venda</em> — nenhuma venda registrada no mês.</li>
+            <li><em>Crítico</em> — devendo preço <u>e</u> devendo volume ao mesmo tempo.</li>
+            <li><em>Devendo preço</em> — preço médio abaixo do planejado.</li>
+            <li><em>Devendo volume</em> — abaixo da curva de vendas esperada até hoje.</li>
+            <li><em>Ok</em> — dentro da meta de preço e da curva de volume.</li>
+          </ul>
+        </li>
+      </ul>
+      <p style="font-size:12.5px;color:var(--neutral);">Racional replicado da aba <code>METAS</code> (colunas de situação, atingimento e curva de meta) da planilha original.</p>
+    `
+  },
+  vendas: {
+    title: "Como os indicadores de Vendas são calculados",
+    body: `
+      <ul>
+        <li><strong>Metas por Regional</strong> (topo da página) = soma da meta de vendas por regional (aba METAS), comparada às vendas reais registradas — igual à visão da aba Vendas do Excel.</li>
+        <li><strong>Vendas</strong> = contagem de propostas no filtro atual.</li>
+        <li><strong>Preço real</strong> = média do preço gerencial das propostas.</li>
+        <li><strong>Margem</strong> = média da % de margem bruta das propostas.</li>
+        <li><strong>VGV</strong> = soma do preço gerencial das propostas.</li>
+        <li><strong>Descontos</strong> = soma de (preço de tabela − preço proposta), por venda.</li>
+        <li><strong>% Ato</strong> = ato médio ÷ preço gerencial médio de cada venda; intervalo mostrado é o mínimo–máximo individual do grupo.</li>
+        <li>Metas de preço e margem exibidas no nível de <strong>tipologia</strong> repetem a meta do empreendimento — a planilha de metas não segrega por tipologia, só por empreendimento.</li>
+      </ul>
+      <p style="font-size:12.5px;color:var(--neutral);">Ao clicar numa linha da matriz, o detalhe do comprador (renda, desconto, LTV, carteira, parcela, risco, sinal e ato) usa os valores já calculados na base de propostas (aba <code>DETH_BASE</code>).</p>
+    `
+  }
+};
+function showInfo(key){
+  const info = INFO[key];
+  document.getElementById("infoModal").innerHTML = `<button class="close-x" id="closeInfoBtn">&times;</button><h3>${info.title}</h3>${info.body}`;
+  document.getElementById("infoOverlay").classList.add("show");
+  document.getElementById("closeInfoBtn").addEventListener("click", hideInfo);
+}
+function hideInfo(){ document.getElementById("infoOverlay").classList.remove("show"); }
+document.addEventListener("click", e=>{ if(e.target.id==="infoOverlay") hideInfo(); });
+window.showInfo = showInfo;
+
+/* ---------------- editor da curva de meta ---------------- */
+/* A curva (Dia do mês → % acumulado esperado de vendas) normalmente vem embutida na
+   aba METAS do Excel (colunas "Dias"/"Representativo"). Este editor permite colar uma
+   curva nova (ex.: copiada de outra planilha, ao virar o mês) sem precisar reeditar o
+   Excel principal. A curva editada aqui é salva junto no arquivo (mesmo lugar de
+   rows/metas), então viaja com o download/salvamento — mas será substituída de novo
+   caso você suba uma nova planilha que já traga sua própria tabela de curva. */
+function escSimple(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function formatCurveForEdit(curve){
+  if(!curve || !curve.length) return "";
+  return curve
+    .slice()
+    .sort((a,b)=>a.dia-b.dia)
+    .map(c => `${c.dia}\t${(c.repr*100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:4})}%`)
+    .join("\n");
+}
+
+function parseCurveInput(text){
+  const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  const curve = [];
+  for(const line of lines){
+    let tokens = line.split(/\t|;/).map(t=>t.trim()).filter(Boolean);
+    if(tokens.length < 2) tokens = line.split(/\s+/).filter(Boolean);
+    if(tokens.length < 2) continue;
+    const dia = parseInt(tokens[0].replace(/[^\d]/g, ""), 10);
+    if(!dia || dia < 1 || dia > 31) continue;
+    const rawPct = tokens[1];
+    const hasPercentSign = rawPct.includes("%");
+    const pctStr = rawPct.replace("%", "").trim().replace(",", ".");
+    const val = parseFloat(pctStr);
+    if(!isFinite(val)) continue;
+    // com "%" explícito, o número sempre representa percentual (mesmo se < 1, ex.: "0,45%" = 0,0045);
+    // sem "%", usa a magnitude para decidir se já é fração (0–1) ou percentual (ex.: "88,33")
+    const repr = hasPercentSign ? (val / 100) : (val > 1 ? val / 100 : val);
+    curve.push({ dia, repr });
+  }
+  curve.sort((a,b)=>a.dia-b.dia);
+  return curve;
+}
+
+function openCurveEditor(){
+  const curve = window.SPI_STATE.curve || [];
+  const fileLabel = window.SPI_STATE.fileName ? `do arquivo "${escSimple(window.SPI_STATE.fileName)}"` : "do último arquivo carregado";
+  const box = document.getElementById("curveModal");
+  box.innerHTML = `
+    <button class="close-x" id="closeCurveBtn">&times;</button>
+    <h3 style="margin-bottom:6px;">Curva de meta</h3>
+    <p style="color:var(--ink-soft);font-size:13.5px;line-height:1.6;margin-top:0;">
+      É o mesmo racional da aba <code>METAS</code> do Excel: % acumulado do volume do mês que
+      já deveria ter sido vendido até cada dia. É o que define "Vendas ideal (hoje)" no RPS.
+    </p>
+    <p style="color:var(--ink-soft);font-size:13.5px;line-height:1.6;">
+      Cole aqui as duas colunas (dia e %) copiadas do Excel — uma linha por dia, de 1 a 31.
+    </p>
+    <textarea id="curveTextarea" spellcheck="false" style="width:100%;min-height:240px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:10px;border-radius:8px;border:1px solid var(--line-strong);resize:vertical;box-sizing:border-box;">${escSimple(formatCurveForEdit(curve))}</textarea>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="btn btn-primary" id="curveApplyBtn" style="flex:1;justify-content:center;">Aplicar curva</button>
+      <button class="btn btn-outline" id="curveCancelBtn">Cancelar</button>
+    </div>
+    <p style="font-size:11.5px;color:var(--neutral);margin-top:14px;margin-bottom:0;">
+      A curva atual veio ${fileLabel}. Ao aplicar, ela substitui a curva em uso e é salva
+      junto na próxima vez que você salvar/baixar o arquivo — mas volta a ser sobrescrita
+      se você subir uma planilha nova que já traga sua própria tabela de curva.
+    </p>
+  `;
+  document.getElementById("curveOverlay").classList.add("show");
+  document.getElementById("closeCurveBtn").addEventListener("click", closeCurveEditor);
+  document.getElementById("curveCancelBtn").addEventListener("click", closeCurveEditor);
+  document.getElementById("curveApplyBtn").addEventListener("click", ()=>{
+    const parsed = parseCurveInput(document.getElementById("curveTextarea").value);
+    if(parsed.length < 5){
+      alert("Não consegui reconhecer pelo menos 5 dias válidos no texto colado. Confira se cada linha tem o dia e o percentual (ex.: \"1\\t2,10%\") e tente novamente.");
+      return;
+    }
+    window.SPI_STATE.curve = parsed;
+    saveLocal(window.SPI_STATE);
+    deriveAndRender();
+    closeCurveEditor();
+    showToast(`Curva atualizada (${parsed.length} dias). Não esqueça de salvar/baixar o arquivo para manter essa curva.`);
+  });
+}
+function closeCurveEditor(){ document.getElementById("curveOverlay").classList.remove("show"); }
+document.addEventListener("click", e=>{ if(e.target.id==="curveOverlay") closeCurveEditor(); });
+window.SPI_openCurveEditor = openCurveEditor;
+
+/* ---------------- bootstrap & sincronização via GitHub ---------------- */
+async function fetchDefaultData() {
+  // Nome exato da planilha que será hospedada junto com o HTML no GitHub
+  const fileName = "Preços SPI - Claude.xlsx";
+  
+  try {
+    const txt = document.getElementById("statusText");
+    if(txt) txt.textContent = "Sincronizando com a nuvem...";
+    
+    // O "?t=" no final força o navegador a não usar o cache do GitHub Pages,
+    // garantindo que as pessoas sempre vejam os números mais atualizados.
+    const urlAntiCache = encodeURI(fileName) + "?t=" + new Date().getTime();
+    const response = await fetch(urlAntiCache, { cache: "no-store" });
+    
+    if (response.ok) {
+      const blob = await response.blob();
+      // Cria um objeto File virtual simulando o upload para o script existente
+      const file = new File([blob], fileName, { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      
+      const parsed = await S.parseWorkbook(file);
+      window.SPI_STATE.rows = parsed.rows;
+      window.SPI_STATE.metas = parsed.metas;
+      window.SPI_STATE.curve = (parsed.curve && parsed.curve.length) ? parsed.curve : window.SPI_STATE.curve;
+      window.SPI_STATE.fileName = parsed.fileName;
+      window.SPI_STATE.updatedAt = parsed.updatedAt;
+      
+      saveLocal(window.SPI_STATE);
+      setLoadedUI(window.SPI_STATE);
+      deriveAndRender();
+      
+      showToast("Dados sincronizados com sucesso a partir do arquivo online.");
+      return true;
+    }
+  } catch (err) {
+    console.warn("Falha ao buscar planilha online. Tentando modo offline...", err);
+  }
+  return false;
+}
+
+async function boot(){
+  initUpload();
+  initTabs();
+
+  // 1) Prioridade máxima: Tenta baixar a planilha mais recente do repositório GitHub
+  const loadedOnline = await fetchDefaultData();
+
+  // 2) Se falhar (ex: sem internet ou o arquivo não está no GitHub), usa os dados locais/embutidos
+  if (!loadedOnline) {
+    const embedded = readEmbeddedData();
+    const cached = embedded || loadLocal();
+
+    if(cached && cached.rows && cached.rows.length){
+      window.SPI_STATE.rows = cached.rows;
+      window.SPI_STATE.metas = cached.metas;
+      window.SPI_STATE.curve = cached.curve || [];
+      window.SPI_STATE.fileName = cached.fileName;
+      window.SPI_STATE.updatedAt = cached.updatedAt;
+      setLoadedUI(window.SPI_STATE);
+      deriveAndRender();
+      
+      if(embedded){
+        showToast("Visualização offline carregada com sucesso.");
+      }
+    } else {
+      document.getElementById("statusText").textContent = "Sem dados";
+    }
+  }
+}
+document.addEventListener("DOMContentLoaded", boot);
+})();
+
+</script>
+</body>
+</html>
+</html>
